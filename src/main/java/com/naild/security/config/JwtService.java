@@ -1,4 +1,4 @@
-package com.Kranker.security.config;
+package com.naild.security.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

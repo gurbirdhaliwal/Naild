@@ -1,4 +1,4 @@
-package com.Kranker.security.user;
+package com.naild.security.user;
 
 
 import jakarta.persistence.*;
@@ -16,11 +16,15 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    private String firstname;
+    private String lastname;
 
     @Column(unique = true,nullable = false)
     private String username;

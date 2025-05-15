@@ -1,4 +1,4 @@
-package com.Kranker.security.user;
+package com.naild.security.user;
 
 public enum Role {
     USER,
