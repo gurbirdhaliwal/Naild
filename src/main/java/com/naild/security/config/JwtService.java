@@ -20,6 +20,7 @@ public class JwtService {
 
     private static final String SECRET_KEY = "REMOVED-ROTATED-JWT-SECRET";
 
+
     public String extractUsername(String token) {
         return extractClaims(token, Claims::getSubject);
     }
