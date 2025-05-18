@@ -30,11 +30,11 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    public String generatetoken(UserDetails userDetails) {
-        return generatetoken(new HashMap<>(), userDetails);
+    public String generateToken(UserDetails userDetails) {
+        return generateToken(new HashMap<>(), userDetails);
     }
 
-    public String generatetoken(
+    public String generateToken(
             Map<String, Object> extraClaims,
             UserDetails userDetails
     ) {
