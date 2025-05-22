@@ -29,7 +29,6 @@ public class AuthenticationController {
         return ResponseEntity.ok(service.authenticate(request));
     }
 
-    // 👇 ADD THIS METHOD BELOW
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");

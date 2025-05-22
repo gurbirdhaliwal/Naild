@@ -22,5 +22,15 @@ public class UserController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         return ResponseEntity.ok(user);
     }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<String> deleteCurrentUser(Authentication authentication) {
+        String email = ((UserDetails) authentication.getPrincipal()).getUsername();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        userRepository.delete(user);
+
+        return ResponseEntity.ok("User account deleted successfully");
+    }
 }
 
