@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.time.Duration;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -35,7 +36,7 @@ public class AuthenticationController {
                 .build();
 
         response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok("Registered Successfully");
+        return ResponseEntity.ok(Map.of("message", "Registered Successfully"));
     }
 
     @PostMapping("/authenticate")
@@ -50,7 +51,7 @@ public class AuthenticationController {
                 .sameSite("Lax")
                 .build();
         response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok("Authenticated Successfully");
+        return ResponseEntity.ok(Map.of("message", "Registered Successfully"));
     }
 
     @PostMapping("/logout")
