@@ -1,0 +1,135 @@
+package com.naild.security.interview;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.naild.security.user.User;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+@Service
+@RequiredArgsConstructor
+public class InterviewService {
+    
+    private final InterviewRepository interviewRepository;
+    private final ObjectMapper objectMapper;
+    
+    public List<Interview> getUserInterviews(User user) {
+        return interviewRepository.findActiveAndCompletedByUser(user);
+    }
+    
+    public Optional<Interview> getInterviewById(Long id, User user) {
+        return interviewRepository.findByIdAndUser(id, user);
+    }
+    
+    public Interview saveInterview(Interview interview) {
+        return interviewRepository.save(interview);
+    }
+    
+    public void deleteInterview(Long id, User user) {
+        Optional<Interview> interview = interviewRepository.findByIdAndUser(id, user);
+        interview.ifPresent(interviewRepository::delete);
+    }
+    
+    public Interview createInterview(User user, String title, String role, List<String> languages, 
+                                  String difficulty, List<String> questions) {
+        try {
+            Interview interview = Interview.builder()
+                    .user(user)
+                    .title(title)
+                    .role(role)
+                    .languages(objectMapper.writeValueAsString(languages))
+                    .difficulty(difficulty)
+                    .status("active")
+                    .questions(objectMapper.writeValueAsString(questions))
+                    .messages("[]")
+                    .currentQuestionIndex(0)
+                    .build();
+            
+            return interviewRepository.save(interview);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error creating interview", e);
+        }
+    }
+    
+    public Interview updateInterviewMessages(Long interviewId, User user, List<Map<String, Object>> messages) {
+        Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
+        if (interviewOpt.isEmpty()) {
+            throw new RuntimeException("Interview not found");
+        }
+        
+        Interview interview = interviewOpt.get();
+        try {
+            interview.setMessages(objectMapper.writeValueAsString(messages));
+            return interviewRepository.save(interview);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error updating interview messages", e);
+        }
+    }
+    
+    public Interview updateInterviewStatus(Long interviewId, User user, String status) {
+        Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
+        if (interviewOpt.isEmpty()) {
+            throw new RuntimeException("Interview not found");
+        }
+        
+        Interview interview = interviewOpt.get();
+        interview.setStatus(status);
+        return interviewRepository.save(interview);
+    }
+    
+    public Interview updateGradingResult(Long interviewId, User user, Map<String, Object> gradingResult) {
+        Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
+        if (interviewOpt.isEmpty()) {
+            throw new RuntimeException("Interview not found");
+        }
+        
+        Interview interview = interviewOpt.get();
+        try {
+            interview.setGradingResult(objectMapper.writeValueAsString(gradingResult));
+            interview.setStatus("completed");
+            return interviewRepository.save(interview);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error updating grading result", e);
+        }
+    }
+    
+    public List<String> getLanguagesFromInterview(Interview interview) {
+        try {
+            return objectMapper.readValue(interview.getLanguages(), new TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
+    }
+    
+    public List<String> getQuestionsFromInterview(Interview interview) {
+        try {
+            return objectMapper.readValue(interview.getQuestions(), new TypeReference<List<String>>() {});
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
+    }
+    
+    public List<Map<String, Object>> getMessagesFromInterview(Interview interview) {
+        try {
+            return objectMapper.readValue(interview.getMessages(), new TypeReference<List<Map<String, Object>>>() {});
+        } catch (JsonProcessingException e) {
+            return List.of();
+        }
+    }
+    
+    public Map<String, Object> getGradingResultFromInterview(Interview interview) {
+        if (interview.getGradingResult() == null) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(interview.getGradingResult(), new TypeReference<Map<String, Object>>() {});
+        } catch (JsonProcessingException e) {
+            return Map.of();
+        }
+    }
+} 
