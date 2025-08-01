@@ -4,6 +4,7 @@ import com.naild.security.config.JwtService;
 import com.naild.security.user.User;
 import com.naild.security.user.UserRepository;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,14 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         String jwt = jwtService.generateToken(user);
 
-        response.sendRedirect("http://localhost:3000/oauth2/success?token=" + jwt);
+        Cookie jwtCookie = new Cookie("token", jwt);
+        jwtCookie.setHttpOnly(true);
+        jwtCookie.setSecure(true);
+        jwtCookie.setPath("/");
+        jwtCookie.setMaxAge(7 * 24 * 60 * 60);
+
+        response.addCookie(jwtCookie);
+
+        response.sendRedirect("http://localhost:3000");
     }
 }
