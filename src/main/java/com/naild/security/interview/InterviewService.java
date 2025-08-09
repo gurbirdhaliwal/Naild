@@ -55,7 +55,18 @@ public class InterviewService {
             throw new RuntimeException("Error creating interview", e);
         }
     }
-    
+
+    public Interview updateCurrentQuestionIndex(Long interviewId, User user, Integer currentQuestionIndex) {
+        Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
+        if (interviewOpt.isEmpty()) {
+            throw new RuntimeException("Interview not found");
+        }
+
+        Interview interview = interviewOpt.get();
+        interview.setCurrentQuestionIndex(currentQuestionIndex);
+        return interviewRepository.save(interview);
+    }
+
     public Interview updateInterviewMessages(Long interviewId, User user, List<Map<String, Object>> messages) {
         Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
         if (interviewOpt.isEmpty()) {

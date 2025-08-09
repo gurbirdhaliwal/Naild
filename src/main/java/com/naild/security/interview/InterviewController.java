@@ -78,6 +78,20 @@ public class InterviewController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PutMapping("/{id}/current_question_index")
+    public ResponseEntity<?> updateInterviewCurrentQuestionIndex(@PathVariable Long id,
+                                                                 @RequestBody Map<String, Integer> request,
+                                                        HttpServletRequest httpRequest) {
+        try {
+            User user = getCurrentUser(httpRequest);
+            Integer currentQuestionIndex = request.get("currentQuestionIndex");
+            Interview interview = interviewService.updateCurrentQuestionIndex(id, user, currentQuestionIndex);
+            return ResponseEntity.ok(interview);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
     
     @PutMapping("/{id}/messages")
     public ResponseEntity<?> updateInterviewMessages(@PathVariable Long id, 
