@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,6 +66,11 @@ public class AuthenticationController {
                 .build();
           response.setHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
           return ResponseEntity.ok("Logout Successful");
+    }
+
+    @GetMapping("/csrf")
+    public ResponseEntity<?> getCsrfToken(CsrfToken csrfToken) {
+        return ResponseEntity.ok(Map.of("token", csrfToken.getToken()));
     }
 
     @GetMapping("/me")
