@@ -30,7 +30,7 @@ public class AuthenticationController {
         var authResponse = service.register(request);
         ResponseCookie cookie = ResponseCookie.from("token", authResponse.getToken())
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .maxAge(Duration.ofDays(7))
                 .sameSite("Lax")
@@ -46,7 +46,7 @@ public class AuthenticationController {
 
         ResponseCookie cookie = ResponseCookie.from("token", authResponse.getToken())
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .maxAge(Duration.ofDays(7))
                 .sameSite("Lax")
@@ -59,7 +59,7 @@ public class AuthenticationController {
     public ResponseEntity<?> logout(HttpServletResponse response) {
         ResponseCookie deleteCookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
-                .secure(true)
+                .secure(false)
                 .path("/")
                 .maxAge(0)
                 .sameSite("Lax")

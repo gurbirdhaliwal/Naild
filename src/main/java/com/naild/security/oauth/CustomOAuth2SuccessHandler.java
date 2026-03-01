@@ -36,7 +36,7 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         Cookie jwtCookie = new Cookie("token", jwt);
         jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(true);
+        jwtCookie.setSecure(false);
         jwtCookie.setPath("/");
         jwtCookie.setMaxAge(7 * 24 * 60 * 60);
 
