@@ -36,7 +36,7 @@ public class AuthenticationController {
                 .sameSite("Lax")
                 .build();
 
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ResponseEntity.ok(Map.of("message", "Registered Successfully"));
     }
 
@@ -51,7 +51,7 @@ public class AuthenticationController {
                 .maxAge(Duration.ofDays(7))
                 .sameSite("Lax")
                 .build();
-        response.setHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
         return ResponseEntity.ok(Map.of("message", "Registered Successfully"));
     }
 
@@ -64,7 +64,7 @@ public class AuthenticationController {
                 .maxAge(0)
                 .sameSite("Lax")
                 .build();
-          response.setHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
+          response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
           return ResponseEntity.ok("Logout Successful");
     }
 
