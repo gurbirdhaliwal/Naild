@@ -1,6 +1,5 @@
 package com.naild.security.demo;
 
-import com.naild.security.auth.RegisterRequest;
 import com.naild.security.auth.UpdateUserRequest;
 import com.naild.security.user.User;
 import com.naild.security.user.UserRepository;
@@ -24,6 +23,16 @@ public class UserController {
         String email = ((UserDetails) authentication.getPrincipal()).getUsername();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getAuthProvider() == null) {
+            String password = user.getPassword();
+            if (password != null && password.startsWith("oauth-user")) {
+                user.setAuthProvider("OAUTH");
+                userRepository.save(user);
+            }
+        }
+
+        user.setPassword(null);
         return ResponseEntity.ok(user);
     }
 
@@ -43,21 +52,40 @@ public class UserController {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        boolean passwordProvided = request.getPassword() != null && !request.getPassword().isBlank();
+        boolean isOauthAccount = isOauthAccount(user);
+
         if (request.getFirstname() != null) user.setFirstname(request.getFirstname());
         if (request.getLastname() != null) user.setLastname(request.getLastname());
-        if (request.getEmail() != null) user.setEmail(request.getEmail());
-        if (request.getPassword() != null) {
-         if (request.getCurrentpassword() == null || request.getCurrentpassword().isBlank()) {
-             return ResponseEntity.badRequest().body("Current password is required to change passwords");
-         } else if (!passwordEncoder.matches(request.getCurrentpassword(), user.getPassword())) {
-             return ResponseEntity.badRequest().body("Current password is incorrect");
-         }
-         user.setPassword(passwordEncoder.encode(request.getPassword()));
+
+        if (passwordProvided) {
+            if (isOauthAccount) {
+                return ResponseEntity.badRequest().body("Password changes are not available for social login accounts");
+            }
+
+            if (request.getCurrentpassword() == null || request.getCurrentpassword().isBlank()) {
+                return ResponseEntity.badRequest().body("Current password is required to change passwords");
+            }
+
+            if (!passwordEncoder.matches(request.getCurrentpassword(), user.getPassword())) {
+                return ResponseEntity.badRequest().body("Current password is incorrect");
+            }
+
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
         userRepository.save(user);
         user.setPassword(null);
         return ResponseEntity.ok(user);
     }
-}
 
+    private boolean isOauthAccount(User user) {
+        String authProvider = user.getAuthProvider();
+        if (authProvider != null && !authProvider.equalsIgnoreCase("LOCAL")) {
+            return true;
+        }
+
+        String password = user.getPassword();
+        return password != null && password.startsWith("oauth-user");
+    }
+}
