@@ -42,6 +42,6 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         response.addCookie(jwtCookie);
 
-        response.sendRedirect("http://localhost:3000");
+        response.sendRedirect("http://localhost:3000/interview");
     }
 }
