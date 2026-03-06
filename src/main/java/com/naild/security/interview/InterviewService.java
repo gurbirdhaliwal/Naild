@@ -92,6 +92,17 @@ public class InterviewService {
         interview.setStatus(status);
         return interviewRepository.save(interview);
     }
+
+    public Interview updateInterviewTitle(Long interviewId, User user, String title) {
+        Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
+        if (interviewOpt.isEmpty()) {
+            throw new RuntimeException("Interview not found");
+        }
+
+        Interview interview = interviewOpt.get();
+        interview.setTitle(title);
+        return interviewRepository.save(interview);
+    }
     
     public Interview updateGradingResult(Long interviewId, User user, Map<String, Object> gradingResult) {
         Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
