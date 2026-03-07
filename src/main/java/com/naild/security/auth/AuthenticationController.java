@@ -32,7 +32,7 @@ public class AuthenticationController {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(Duration.ofDays(7))
+                .maxAge(Duration.ofHours(1))
                 .sameSite("Lax")
                 .build();
 
@@ -48,7 +48,7 @@ public class AuthenticationController {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .maxAge(Duration.ofDays(7))
+                .maxAge(Duration.ofHours(1))
                 .sameSite("Lax")
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
