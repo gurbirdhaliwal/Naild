@@ -209,7 +209,13 @@ public class InterviewController {
         
         String email = jwtService.extractUsername(token);
         System.out.println("Extracted email from token: " + email);
-        return userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!jwtService.isTokenValid(token, user)) {
+            throw new RuntimeException("Invalid or expired token");
+        }
+
+        return user;
     }
 } 

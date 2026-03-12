@@ -1,5 +1,6 @@
 package com.naild.security.config;
 
+import com.naild.security.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -9,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -50,7 +52,9 @@ public class JwtService {
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String username = extractUsername(token);
-        return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
+        return username.equals(userDetails.getUsername())
+                && !isTokenExpired(token)
+                && isIssuedAfterPasswordChange(token, userDetails);
     }
 
     private boolean isTokenExpired(String token) {
@@ -59,6 +63,27 @@ public class JwtService {
 
     private Date extractExpiration(String token) {
         return extractClaims(token, Claims::getExpiration);
+    }
+
+    private Date extractIssuedAt(String token) {
+        return extractClaims(token, Claims::getIssuedAt);
+    }
+
+    private boolean isIssuedAfterPasswordChange(String token, UserDetails userDetails) {
+        if (!(userDetails instanceof User user) || user.getPasswordChangedAt() == null) {
+            return true;
+        }
+
+        Date issuedAt = extractIssuedAt(token);
+        if (issuedAt == null) {
+            return false;
+        }
+
+        Date passwordChangedAt = Date.from(
+                user.getPasswordChangedAt().atZone(ZoneId.systemDefault()).toInstant()
+        );
+
+        return !issuedAt.before(passwordChangedAt);
     }
 
     public Claims extractAllClaims(String token) {
