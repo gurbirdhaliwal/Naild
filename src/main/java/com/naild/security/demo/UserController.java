@@ -1,6 +1,7 @@
 package com.naild.security.demo;
 
 import com.naild.security.auth.UpdateUserRequest;
+import com.naild.security.mail.AccountEmailService;
 import com.naild.security.user.User;
 import com.naild.security.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ public class UserController {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AccountEmailService accountEmailService;
 
     @GetMapping("/me")
     public ResponseEntity<User> getCurrentUser(Authentication authentication) {
@@ -72,9 +74,13 @@ public class UserController {
             }
 
             user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.markPasswordChangedNow();
         }
 
         userRepository.save(user);
+        if (passwordProvided) {
+            accountEmailService.sendPasswordChangedEmail(user);
+        }
         user.setPassword(null);
         return ResponseEntity.ok(user);
     }

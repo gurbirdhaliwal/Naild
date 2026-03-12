@@ -22,6 +22,7 @@ import java.util.Map;
 public class AuthenticationController {
 
     private final AuthenticationService service;
+    private final PasswordResetService passwordResetService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
@@ -68,6 +69,25 @@ public class AuthenticationController {
           return ResponseEntity.ok("Logout Successful");
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        passwordResetService.requestPasswordReset(request);
+        return ResponseEntity.ok(Map.of(
+                "message",
+                "If an account exists for that email, a password reset link has been sent."
+        ));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        try {
+            passwordResetService.resetPassword(request);
+            return ResponseEntity.ok(Map.of("message", "Password reset successfully."));
+        } catch (PasswordResetException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
     @GetMapping("/csrf")
     public ResponseEntity<?> getCsrfToken(CsrfToken csrfToken) {
         return ResponseEntity.ok(Map.of("token", csrfToken.getToken()));
@@ -75,25 +95,39 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
-        String token = null;
-        if (request.getCookies() != null) {
-            for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
-                if ("token".equals(cookie.getName())) {
-                    token = cookie.getValue();
-                }
-            }
-        }
-
+        String token = extractTokenFromCookies(request);
         if (token == null) {
             return ResponseEntity.badRequest().body("Missing token cookie");
         }
 
-        String email = jwtService.extractUsername(token);
-        User user = userRepository.findByEmail(email).orElseThrow();
+        try {
+            String email = jwtService.extractUsername(token);
+            User user = userRepository.findByEmail(email).orElseThrow();
 
-        // Optional: avoid sending password field back
-        user.setPassword(null);
+            if (!jwtService.isTokenValid(token, user)) {
+                return ResponseEntity.status(401).body("Invalid or expired token");
+            }
 
-        return ResponseEntity.ok(user);
+            // Optional: avoid sending password field back
+            user.setPassword(null);
+
+            return ResponseEntity.ok(user);
+        } catch (Exception ex) {
+            return ResponseEntity.status(401).body("Invalid or expired token");
+        }
+    }
+
+    private String extractTokenFromCookies(HttpServletRequest request) {
+        if (request.getCookies() == null) {
+            return null;
+        }
+
+        for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+            if ("token".equals(cookie.getName())) {
+                return cookie.getValue();
+            }
+        }
+
+        return null;
     }
 }

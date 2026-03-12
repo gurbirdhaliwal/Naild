@@ -1,6 +1,7 @@
 package com.naild.security.user;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -34,6 +35,7 @@ public class User implements UserDetails {
     private String email;
 
     @Column(unique = true,nullable = false)
+    @JsonIgnore
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -44,6 +46,16 @@ public class User implements UserDetails {
 
     @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    @JsonIgnore
+    private LocalDateTime passwordChangedAt;
+
+    @Column(length = 64)
+    @JsonIgnore
+    private String passwordResetTokenHash;
+
+    @JsonIgnore
+    private LocalDateTime passwordResetTokenExpiresAt;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -85,5 +97,12 @@ public class User implements UserDetails {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+        if (passwordChangedAt == null) {
+            passwordChangedAt = createdAt;
+        }
+    }
+
+    public void markPasswordChangedNow() {
+        passwordChangedAt = LocalDateTime.now();
     }
 }
