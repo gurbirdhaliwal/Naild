@@ -67,9 +67,31 @@ public class InterviewController {
             String difficulty = (String) request.get("difficulty");
             @SuppressWarnings("unchecked")
             List<String> questions = (List<String>) request.get("questions");
+            String sessionType = request.get("sessionType") instanceof String ? (String) request.get("sessionType") : "behavioral-interview";
+            String practiceMode = request.get("practiceMode") instanceof String ? (String) request.get("practiceMode") : null;
+            String audience = request.get("audience") instanceof String ? (String) request.get("audience") : null;
+            String topic = request.get("topic") instanceof String ? (String) request.get("topic") : null;
+            String promptContext = request.get("promptContext") instanceof String ? (String) request.get("promptContext") : null;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> generatedPrompt = request.get("generatedPrompt") instanceof Map
+                    ? (Map<String, Object>) request.get("generatedPrompt")
+                    : null;
             
             System.out.println("Creating interview with title: " + title + ", role: " + role);
-            Interview interview = interviewService.createInterview(user, title, role, languages, difficulty, questions);
+            Interview interview = interviewService.createInterview(
+                    user,
+                    title,
+                    role,
+                    languages,
+                    difficulty,
+                    questions,
+                    sessionType,
+                    practiceMode,
+                    audience,
+                    topic,
+                    promptContext,
+                    generatedPrompt
+            );
             System.out.println("Interview created with ID: " + interview.getId());
             return ResponseEntity.ok(interview);
         } catch (Exception e) {

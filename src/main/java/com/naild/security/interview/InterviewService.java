@@ -37,15 +37,45 @@ public class InterviewService {
     
     public Interview createInterview(User user, String title, String role, List<String> languages, 
                                   String difficulty, List<String> questions) {
+        return createInterview(user, title, role, languages, difficulty, questions, "behavioral-interview", null, null, null, null, null);
+    }
+
+    public Interview createInterview(
+            User user,
+            String title,
+            String role,
+            List<String> languages,
+            String difficulty,
+            List<String> questions,
+            String sessionType,
+            String practiceMode,
+            String audience,
+            String topic,
+            String promptContext,
+            Map<String, Object> generatedPrompt
+    ) {
         try {
+            List<String> safeLanguages = languages == null ? List.of() : languages;
+            List<String> safeQuestions = questions == null ? List.of() : questions;
+            String resolvedRole = normalizeRequiredText(role, "Practice Session");
+            String resolvedDifficulty = normalizeRequiredText(difficulty, "mid");
+            String resolvedSessionType = normalizeRequiredText(sessionType, "behavioral-interview");
+            String resolvedTitle = buildTitle(title, generatedPrompt, resolvedRole, practiceMode, topic, resolvedSessionType);
+
             Interview interview = Interview.builder()
                     .user(user)
-                    .title(title)
-                    .role(role)
-                    .languages(objectMapper.writeValueAsString(languages))
-                    .difficulty(difficulty)
+                    .title(resolvedTitle)
+                    .role(resolvedRole)
+                    .languages(objectMapper.writeValueAsString(safeLanguages))
+                    .difficulty(resolvedDifficulty)
+                    .sessionType(resolvedSessionType)
+                    .practiceMode(normalizeOptionalText(practiceMode))
+                    .audience(normalizeOptionalText(audience))
+                    .topic(normalizeOptionalText(topic))
+                    .promptContext(normalizeOptionalText(promptContext))
+                    .generatedPrompt(generatedPrompt == null ? null : objectMapper.writeValueAsString(generatedPrompt))
                     .status("active")
-                    .questions(objectMapper.writeValueAsString(questions))
+                    .questions(objectMapper.writeValueAsString(safeQuestions))
                     .messages("[]")
                     .currentQuestionIndex(0)
                     .build();
@@ -154,4 +184,62 @@ public class InterviewService {
             return Map.of();
         }
     }
-} 
+
+    private String normalizeRequiredText(String value, String fallback) {
+        if (value == null) {
+            return fallback;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? fallback : normalized;
+    }
+
+    private String normalizeOptionalText(String value) {
+        if (value == null) {
+            return null;
+        }
+
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String buildTitle(
+            String title,
+            Map<String, Object> generatedPrompt,
+            String role,
+            String practiceMode,
+            String topic,
+            String sessionType
+    ) {
+        String explicitTitle = normalizeOptionalText(title);
+        if (explicitTitle != null) {
+            return explicitTitle;
+        }
+
+        if (generatedPrompt != null) {
+            Object generatedTitle = generatedPrompt.get("title");
+            if (generatedTitle instanceof String generatedTitleText) {
+                String normalizedGeneratedTitle = normalizeOptionalText(generatedTitleText);
+                if (normalizedGeneratedTitle != null) {
+                    return normalizedGeneratedTitle;
+                }
+            }
+        }
+
+        String normalizedTopic = normalizeOptionalText(topic);
+        if ("technical-communication".equals(normalizeRequiredText(sessionType, "behavioral-interview"))) {
+            if (normalizedTopic != null) {
+                return role + " • " + normalizedTopic;
+            }
+
+            String normalizedPracticeMode = normalizeOptionalText(practiceMode);
+            if (normalizedPracticeMode != null) {
+                return role + " • " + normalizedPracticeMode.replace('-', ' ');
+            }
+
+            return role + " • Technical communication";
+        }
+
+        return role + " Behavioral Interview";
+    }
+}

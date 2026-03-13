@@ -35,6 +35,22 @@ public class Interview {
     
     @Column(nullable = false)
     private String difficulty;
+
+    @Column(name = "session_type")
+    private String sessionType;
+
+    @Column(name = "practice_mode")
+    private String practiceMode;
+
+    private String audience;
+
+    private String topic;
+
+    @Column(columnDefinition = "TEXT")
+    private String promptContext;
+
+    @Column(columnDefinition = "JSON")
+    private String generatedPrompt;
     
     @Column(nullable = false)
     private String status; // "active", "completed", "paused"
@@ -58,6 +74,12 @@ public class Interview {
     
     @PrePersist
     protected void onCreate() {
+        if (status == null) {
+            status = "active";
+        }
+        if (sessionType == null) {
+            sessionType = "behavioral-interview";
+        }
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
