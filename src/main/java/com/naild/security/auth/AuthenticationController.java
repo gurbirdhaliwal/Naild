@@ -95,9 +95,9 @@ public class AuthenticationController {
 
     @GetMapping("/me")
     public ResponseEntity<?> getCurrentUser(HttpServletRequest request) {
-        String token = extractTokenFromCookies(request);
+        String token = extractToken(request);
         if (token == null) {
-            return ResponseEntity.badRequest().body("Missing token cookie");
+            return ResponseEntity.badRequest().body("Missing authentication token");
         }
 
         try {
@@ -117,7 +117,12 @@ public class AuthenticationController {
         }
     }
 
-    private String extractTokenFromCookies(HttpServletRequest request) {
+    private String extractToken(HttpServletRequest request) {
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7).trim();
+        }
+
         if (request.getCookies() == null) {
             return null;
         }
