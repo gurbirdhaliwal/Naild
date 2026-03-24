@@ -44,7 +44,7 @@ public class SecurityConfiguration {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/auth/**", "/oauth2/**", "/login/oauth2/**", "/h2-console/**").permitAll()
-                        .requestMatchers("/api/v1/interviews/**").authenticated()
+                        .requestMatchers("/api/v1/interviews", "/api/v1/interviews/**").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(exceptions -> exceptions
                         .defaultAuthenticationEntryPointFor(

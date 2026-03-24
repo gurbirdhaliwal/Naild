@@ -10,6 +10,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.HashMap;
@@ -20,7 +22,7 @@ import java.util.function.Function;
 public class JwtService {
 
     private static final String SECRET_KEY = "REMOVED-ROTATED-JWT-SECRET";
-    private static final long JWT_EXPIRATION_MS = 1000L * 60 * 60;
+    private static final Duration SESSION_DURATION = Duration.ofHours(1);
 
 
     public String extractUsername(String token) {
@@ -40,12 +42,13 @@ public class JwtService {
             Map<String, Object> extraClaims,
             UserDetails userDetails
     ) {
+        Instant issuedAt = Instant.now();
         return Jwts
                 .builder()
                 .setClaims(extraClaims)
                 .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date(System.currentTimeMillis()))
-                .setExpiration(new Date(System.currentTimeMillis() + JWT_EXPIRATION_MS))
+                .setIssuedAt(Date.from(issuedAt))
+                .setExpiration(Date.from(issuedAt.plus(SESSION_DURATION)))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -63,6 +66,14 @@ public class JwtService {
 
     private Date extractExpiration(String token) {
         return extractClaims(token, Claims::getExpiration);
+    }
+
+    public Instant extractExpirationInstant(String token) {
+        return extractExpiration(token).toInstant();
+    }
+
+    public Duration getSessionDuration() {
+        return SESSION_DURATION;
     }
 
     private Date extractIssuedAt(String token) {

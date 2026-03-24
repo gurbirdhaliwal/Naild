@@ -1,11 +1,11 @@
 package com.naild.security.interview;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.naild.security.user.User;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Entity
 @Table(name = "interviews")
@@ -22,6 +22,7 @@ public class Interview {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnore
     private User user;
     
     @Column(nullable = false)

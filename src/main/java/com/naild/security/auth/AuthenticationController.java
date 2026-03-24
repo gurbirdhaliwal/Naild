@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import java.time.Duration;
 import java.util.Map;
 
 @RestController
@@ -29,31 +28,23 @@ public class AuthenticationController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletResponse response) {
         var authResponse = service.register(request);
-        ResponseCookie cookie = ResponseCookie.from("token", authResponse.getToken())
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(Duration.ofHours(1))
-                .sameSite("Lax")
-                .build();
-
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok(Map.of("message", "Registered Successfully"));
+        addAuthCookie(response, authResponse.getToken());
+        return ResponseEntity.ok(Map.of(
+                "message", "Registered Successfully",
+                "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
+                "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
+        ));
     }
 
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest request, HttpServletResponse response) {
         var authResponse = service.authenticate(request);
-
-        ResponseCookie cookie = ResponseCookie.from("token", authResponse.getToken())
-                .httpOnly(true)
-                .secure(false)
-                .path("/")
-                .maxAge(Duration.ofHours(1))
-                .sameSite("Lax")
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
-        return ResponseEntity.ok(Map.of("message", "Registered Successfully"));
+        addAuthCookie(response, authResponse.getToken());
+        return ResponseEntity.ok(Map.of(
+                "message", "Authenticated Successfully",
+                "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
+                "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
+        ));
     }
 
     @PostMapping("/logout")
@@ -111,10 +102,25 @@ public class AuthenticationController {
             // Optional: avoid sending password field back
             user.setPassword(null);
 
-            return ResponseEntity.ok(user);
+            return ResponseEntity.ok(AuthenticatedUserResponse.builder()
+                    .user(user)
+                    .sessionExpiresAt(jwtService.extractExpirationInstant(token))
+                    .sessionDurationSeconds(jwtService.getSessionDuration().toSeconds())
+                    .build());
         } catch (Exception ex) {
             return ResponseEntity.status(401).body("Invalid or expired token");
         }
+    }
+
+    private void addAuthCookie(HttpServletResponse response, String token) {
+        ResponseCookie cookie = ResponseCookie.from("token", token)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .maxAge(jwtService.getSessionDuration())
+                .sameSite("Lax")
+                .build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
     private String extractToken(HttpServletRequest request) {
