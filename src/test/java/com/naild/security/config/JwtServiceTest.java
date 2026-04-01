@@ -12,7 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class JwtServiceTest {
 
-    private final JwtService jwtService = new JwtService();
+    private static final String TEST_SECRET_KEY = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+
+    private final JwtService jwtService = new JwtService(TEST_SECRET_KEY);
 
     @Test
     void tokenIsValidWhenIssuedAfterLatestPasswordChange() {
