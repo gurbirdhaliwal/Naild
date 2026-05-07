@@ -1,0 +1,114 @@
+name: Deploy Spring API to Cloud Run
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  WORKLOAD_IDENTITY_PROVIDER: projects/788527456103/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
+  DEPLOY_SERVICE_ACCOUNT: 788527456103-compute@developer.gserviceaccount.com
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  REGION: ${{ vars.GCP_REGION || 'us-central1' }}
+  ARTIFACT_REGISTRY_REPO: ${{ vars.ARTIFACT_REGISTRY_REPO || 'naild-repo' }}
+  SPRING_SERVICE: ${{ vars.CLOUD_RUN_SPRING_SERVICE || 'naild-spring' }}
+  CLOUD_RUN_SERVICE_ACCOUNT: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT }}
+  WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
+  SPRING_DATASOURCE_URL: ${{ vars.SPRING_DATASOURCE_URL }}
+  SPRING_DATASOURCE_USERNAME: ${{ vars.SPRING_DATASOURCE_USERNAME }}
+  GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
+  APP_PASSWORD_RESET_BASE_URL: ${{ vars.APP_PASSWORD_RESET_BASE_URL }}
+  APP_PASSWORD_RESET_EXPIRY_MINUTES: ${{ vars.APP_PASSWORD_RESET_EXPIRY_MINUTES || '60' }}
+  APP_MAIL_MODE: ${{ vars.APP_MAIL_MODE || 'log' }}
+  APP_MAIL_FROM: ${{ vars.APP_MAIL_FROM || 'no-reply@naild.local' }}
+  SPRING_DATASOURCE_PASSWORD_SECRET_NAME: ${{ vars.SPRING_DATASOURCE_PASSWORD_SECRET_NAME || 'spring-datasource-password' }}
+  APP_JWT_SECRET_NAME: ${{ vars.APP_JWT_SECRET_NAME || 'app-jwt-secret' }}
+  GOOGLE_OAUTH_CLIENT_SECRET_NAME: ${{ vars.GOOGLE_OAUTH_CLIENT_SECRET_NAME || 'google-oauth-client-secret' }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            PROJECT_ID
+            WEB_ORIGIN
+            SPRING_DATASOURCE_URL
+            SPRING_DATASOURCE_USERNAME
+            GOOGLE_OAUTH_CLIENT_ID
+            APP_PASSWORD_RESET_BASE_URL
+          )
+
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing GitHub Actions variable: ${name}"
+              exit 1
+            fi
+          done
+
+      - id: auth
+        name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Test gcloud
+        run: gcloud info
+
+      - name: Configure Docker for Artifact Registry
+        shell: bash
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SPRING_SERVICE}:${GITHUB_SHA}"
+          docker build -f Dockerfile -t "${IMAGE}" .
+
+      - name: Push image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SPRING_SERVICE}:${GITHUB_SHA}"
+          docker push "${IMAGE}"
+
+      - name: Deploy Spring API
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REGISTRY_REPO}/${SPRING_SERVICE}:${GITHUB_SHA}"
+          args=(
+            run deploy "${SPRING_SERVICE}"
+            --image "${IMAGE}"
+            --region "${REGION}"
+            --platform managed
+            --allow-unauthenticated
+            --set-env-vars "^@^SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}@SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}@SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}@CORS_ALLOW_ORIGINS=${WEB_ORIGIN}@APP_PASSWORD_RESET_BASE_URL=${APP_PASSWORD_RESET_BASE_URL}@APP_PASSWORD_RESET_EXPIRY_MINUTES=${APP_PASSWORD_RESET_EXPIRY_MINUTES}@APP_MAIL_MODE=${APP_MAIL_MODE}@APP_MAIL_FROM=${APP_MAIL_FROM}"
+            --set-secrets "SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD_SECRET_NAME}:latest,APP_JWT_SECRET=${APP_JWT_SECRET_NAME}:latest,SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_GOOGLE_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET_NAME}:latest"
+          )
+
+          if [[ -n "${CLOUD_RUN_SERVICE_ACCOUNT:-}" ]]; then
+            args+=(--service-account "${CLOUD_RUN_SERVICE_ACCOUNT}")
+          fi
+
+          gcloud "${args[@]}"
