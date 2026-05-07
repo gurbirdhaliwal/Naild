@@ -58,6 +58,11 @@ jobs:
             fi
           done
 
+          if [[ "${SPRING_DATASOURCE_URL}" == *"127.0.0.1"* || "${SPRING_DATASOURCE_URL}" == *"localhost"* ]]; then
+            echo "::error::SPRING_DATASOURCE_URL points to localhost. Cloud Run needs the production Cloud SQL URL, for example jdbc:mysql://136.112.103.223:3306/naild_db"
+            exit 1
+          fi
+
       - id: auth
         name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
