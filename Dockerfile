@@ -1,4 +1,4 @@
-FROM eclipse-temurin:23-jdk AS build
+FROM eclipse-temurin:21-jdk AS build
 
 WORKDIR /workspace
 
@@ -9,7 +9,7 @@ RUN ./mvnw -q -DskipTests dependency:go-offline
 COPY src/ src/
 RUN ./mvnw -DskipTests package
 
-FROM eclipse-temurin:23-jdk
+FROM eclipse-temurin:21-jdk
 
 WORKDIR /app
 
