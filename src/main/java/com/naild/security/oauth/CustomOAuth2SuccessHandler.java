@@ -4,10 +4,12 @@ import com.naild.security.config.JwtService;
 import com.naild.security.user.User;
 import com.naild.security.user.UserRepository;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -22,6 +24,15 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     private final JwtService jwtService;
     private final UserRepository userRepository;
 
+    @Value("${app.oauth.success-redirect-url:http://localhost:3000/interview}")
+    private String successRedirectUrl;
+
+    @Value("${app.auth.cookie-secure:true}")
+    private boolean cookieSecure;
+
+    @Value("${app.auth.cookie-same-site:None}")
+    private String cookieSameSite;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
@@ -34,14 +45,15 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
 
         String jwt = jwtService.generateToken(user);
 
-        Cookie jwtCookie = new Cookie("token", jwt);
-        jwtCookie.setHttpOnly(true);
-        jwtCookie.setSecure(false);
-        jwtCookie.setPath("/");
-        jwtCookie.setMaxAge(Math.toIntExact(jwtService.getSessionDuration().toSeconds()));
+        ResponseCookie jwtCookie = ResponseCookie.from("token", jwt)
+                .httpOnly(true)
+                .secure(cookieSecure)
+                .path("/")
+                .maxAge(jwtService.getSessionDuration())
+                .sameSite(cookieSameSite)
+                .build();
 
-        response.addCookie(jwtCookie);
-
-        response.sendRedirect("http://localhost:3000/interview");
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+        response.sendRedirect(successRedirectUrl);
     }
 }

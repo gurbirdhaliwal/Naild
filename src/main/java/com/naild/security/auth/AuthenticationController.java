@@ -5,6 +5,7 @@ import com.naild.security.user.User;
 import com.naild.security.user.UserRepository;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,12 @@ public class AuthenticationController {
     private final PasswordResetService passwordResetService;
     private final JwtService jwtService;
     private final UserRepository userRepository;
+
+    @Value("${app.auth.cookie-secure:true}")
+    private boolean cookieSecure;
+
+    @Value("${app.auth.cookie-same-site:None}")
+    private String cookieSameSite;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletResponse response) {
@@ -51,10 +58,10 @@ public class AuthenticationController {
     public ResponseEntity<?> logout(HttpServletResponse response) {
         ResponseCookie deleteCookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(0)
-                .sameSite("Lax")
+                .sameSite(cookieSameSite)
                 .build();
           response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
           return ResponseEntity.ok("Logout Successful");
@@ -115,10 +122,10 @@ public class AuthenticationController {
     private void addAuthCookie(HttpServletResponse response, String token) {
         ResponseCookie cookie = ResponseCookie.from("token", token)
                 .httpOnly(true)
-                .secure(false)
+                .secure(cookieSecure)
                 .path("/")
                 .maxAge(jwtService.getSessionDuration())
-                .sameSite("Lax")
+                .sameSite(cookieSameSite)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
