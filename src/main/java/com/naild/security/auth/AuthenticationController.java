@@ -38,6 +38,7 @@ public class AuthenticationController {
         addAuthCookie(response, authResponse.getToken());
         return ResponseEntity.ok(Map.of(
                 "message", "Registered Successfully",
+                "token", authResponse.getToken(),
                 "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
                 "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
         ));
@@ -49,6 +50,7 @@ public class AuthenticationController {
         addAuthCookie(response, authResponse.getToken());
         return ResponseEntity.ok(Map.of(
                 "message", "Authenticated Successfully",
+                "token", authResponse.getToken(),
                 "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
                 "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
         ));
@@ -113,6 +115,7 @@ public class AuthenticationController {
                     .user(user)
                     .sessionExpiresAt(jwtService.extractExpirationInstant(token))
                     .sessionDurationSeconds(jwtService.getSessionDuration().toSeconds())
+                    .token(token)
                     .build());
         } catch (Exception ex) {
             return ResponseEntity.status(401).body("Invalid or expired token");
