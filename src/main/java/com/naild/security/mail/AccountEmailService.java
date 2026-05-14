@@ -25,15 +25,15 @@ public class AccountEmailService {
     @Value("${app.mail.mode:log}")
     private String mailMode;
 
-    @Value("${app.mail.from:no-reply@memotree.local}")
+    @Value("${app.mail.from:no-reply@memova.local}")
     private String fromAddress;
 
     public void sendPasswordResetEmail(User user, String resetLink, long expiryMinutes) {
-        String subject = "Reset your Memotree password";
+        String subject = "Reset your Memova password";
         String body = """
                 Hi %s,
 
-                We received a request to reset your Memotree password.
+                We received a request to reset your Memova password.
 
                 Reset your password using this link:
                 %s
@@ -45,11 +45,11 @@ public class AccountEmailService {
     }
 
     public void sendPasswordChangedEmail(User user) {
-        String subject = "Your Memotree password was changed";
+        String subject = "Your Memova password was changed";
         String body = """
                 Hi %s,
 
-                This is a confirmation that your Memotree password was changed on %s.
+                This is a confirmation that your Memova password was changed on %s.
 
                 If you did not make this change, reset your password immediately and contact support.
                 """.formatted(displayName(user), LocalDateTime.now().format(TIMESTAMP_FORMATTER));
