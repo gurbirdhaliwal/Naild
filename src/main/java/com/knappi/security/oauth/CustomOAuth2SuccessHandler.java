@@ -33,6 +33,9 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
     @Value("${app.auth.cookie-same-site:None}")
     private String cookieSameSite;
 
+    @Value("${app.auth.cookie-domain:}")
+    private String cookieDomain;
+
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException, ServletException {
@@ -44,16 +47,31 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
                 .orElseThrow(() -> new RuntimeException("User not found after Google login"));
 
         String jwt = jwtService.generateToken(user);
+        String domain = cookieDomain == null ? "" : cookieDomain.trim();
 
-        ResponseCookie jwtCookie = ResponseCookie.from("token", jwt)
+        if (!domain.isBlank()) {
+            ResponseCookie legacyDeleteCookie = ResponseCookie.from("token", "")
+                    .httpOnly(true)
+                    .secure(cookieSecure)
+                    .path("/")
+                    .maxAge(0)
+                    .sameSite(cookieSameSite)
+                    .build();
+            response.addHeader(HttpHeaders.SET_COOKIE, legacyDeleteCookie.toString());
+        }
+
+        ResponseCookie.ResponseCookieBuilder jwtCookie = ResponseCookie.from("token", jwt)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(jwtService.getSessionDuration())
-                .sameSite(cookieSameSite)
-                .build();
+                .sameSite(cookieSameSite);
 
-        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.toString());
+        if (!domain.isBlank()) {
+            jwtCookie.domain(domain);
+        }
+
+        response.addHeader(HttpHeaders.SET_COOKIE, jwtCookie.build().toString());
         response.sendRedirect(successRedirectUrl);
     }
 }

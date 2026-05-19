@@ -16,5 +16,4 @@ public class AuthenticatedUserResponse {
     private User user;
     private Instant sessionExpiresAt;
     private long sessionDurationSeconds;
-    private String token;
 }

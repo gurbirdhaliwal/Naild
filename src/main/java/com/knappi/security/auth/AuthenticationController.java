@@ -32,13 +32,15 @@ public class AuthenticationController {
     @Value("${app.auth.cookie-same-site:None}")
     private String cookieSameSite;
 
+    @Value("${app.auth.cookie-domain:}")
+    private String cookieDomain;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletResponse response) {
         var authResponse = service.register(request);
         addAuthCookie(response, authResponse.getToken());
         return ResponseEntity.ok(Map.of(
                 "message", "Registered Successfully",
-                "token", authResponse.getToken(),
                 "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
                 "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
         ));
@@ -50,7 +52,6 @@ public class AuthenticationController {
         addAuthCookie(response, authResponse.getToken());
         return ResponseEntity.ok(Map.of(
                 "message", "Authenticated Successfully",
-                "token", authResponse.getToken(),
                 "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
                 "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
         ));
@@ -58,15 +59,26 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        ResponseCookie deleteCookie = ResponseCookie.from("token", "")
+        response.addHeader(HttpHeaders.SET_COOKIE, buildDeleteCookie(false).toString());
+
+        if (hasCookieDomain()) {
+            response.addHeader(HttpHeaders.SET_COOKIE, buildDeleteCookie(true).toString());
+        }
+
+        return ResponseEntity.ok("Logout Successful");
+    }
+
+    private ResponseCookie buildDeleteCookie(boolean includeDomain) {
+        ResponseCookie.ResponseCookieBuilder deleteCookie = ResponseCookie.from("token", "")
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(0)
-                .sameSite(cookieSameSite)
-                .build();
-          response.addHeader(HttpHeaders.SET_COOKIE, deleteCookie.toString());
-          return ResponseEntity.ok("Logout Successful");
+                .sameSite(cookieSameSite);
+        if (includeDomain) {
+            applyCookieDomain(deleteCookie);
+        }
+        return deleteCookie.build();
     }
 
     @PostMapping("/forgot-password")
@@ -115,7 +127,6 @@ public class AuthenticationController {
                     .user(user)
                     .sessionExpiresAt(jwtService.extractExpirationInstant(token))
                     .sessionDurationSeconds(jwtService.getSessionDuration().toSeconds())
-                    .token(token)
                     .build());
         } catch (Exception ex) {
             return ResponseEntity.status(401).body("Invalid or expired token");
@@ -123,14 +134,33 @@ public class AuthenticationController {
     }
 
     private void addAuthCookie(HttpServletResponse response, String token) {
-        ResponseCookie cookie = ResponseCookie.from("token", token)
+        if (hasCookieDomain()) {
+            response.addHeader(HttpHeaders.SET_COOKIE, buildDeleteCookie(false).toString());
+        }
+
+        ResponseCookie.ResponseCookieBuilder cookie = ResponseCookie.from("token", token)
                 .httpOnly(true)
                 .secure(cookieSecure)
                 .path("/")
                 .maxAge(jwtService.getSessionDuration())
-                .sameSite(cookieSameSite)
-                .build();
-        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+                .sameSite(cookieSameSite);
+        if (hasCookieDomain()) {
+            applyCookieDomain(cookie);
+        }
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.build().toString());
+    }
+
+    private void applyCookieDomain(ResponseCookie.ResponseCookieBuilder cookieBuilder) {
+        cookieBuilder.domain(getCookieDomain());
+    }
+
+    private boolean hasCookieDomain() {
+        return !getCookieDomain().isBlank();
+    }
+
+    private String getCookieDomain() {
+        String domain = cookieDomain == null ? "" : cookieDomain.trim();
+        return domain;
     }
 
     private String extractToken(HttpServletRequest request) {

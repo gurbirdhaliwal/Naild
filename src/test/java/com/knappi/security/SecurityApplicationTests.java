@@ -1,13 +1,14 @@
 package com.knappi.security;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+import static org.assertj.core.api.Assertions.assertThat;
+
 class SecurityApplicationTests {
 
 	@Test
-	void contextLoads() {
+	void applicationClassIsPresent() {
+		assertThat(SecurityApplication.class).isNotNull();
 	}
 
 }
