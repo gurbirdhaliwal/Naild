@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -52,15 +53,36 @@ class AuthenticationControllerTest {
     }
 
     @Test
-    void authenticateSetsHttpOnlyCookieWithoutReturningJwtInJson() throws Exception {
-        when(authenticationService.authenticate(any(AuthenticationRequest.class)))
-                .thenReturn(AuthenticationResponse.builder().token(JWT).build());
+    void authenticateSendsVerificationCodeWithoutSettingCookie() throws Exception {
+        doNothing().when(authenticationService).authenticate(any(AuthenticationRequest.class));
 
         String body = """
                 {"email":"user@example.com","password":"password"}
                 """;
 
         List<String> setCookies = mockMvc.perform(post("/api/v1/auth/authenticate")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.requiresEmailVerification").value(true))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andReturn()
+                .getResponse()
+                .getHeaders(HttpHeaders.SET_COOKIE);
+
+        assertThat(setCookies).isEmpty();
+    }
+
+    @Test
+    void verifyAuthenticationCodeSetsHttpOnlyCookieWithoutReturningJwtInJson() throws Exception {
+        when(authenticationService.verifyLoginCode(any(LoginVerificationRequest.class)))
+                .thenReturn(AuthenticationResponse.builder().token(JWT).build());
+
+        String body = """
+                {"email":"user@example.com","code":"123456"}
+                """;
+
+        List<String> setCookies = mockMvc.perform(post("/api/v1/auth/authenticate/verify")
                         .contentType("application/json")
                         .content(body))
                 .andExpect(status().isOk())

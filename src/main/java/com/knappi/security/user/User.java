@@ -57,6 +57,16 @@ public class User implements UserDetails {
     @JsonIgnore
     private LocalDateTime passwordResetTokenExpiresAt;
 
+    @Column(length = 100)
+    @JsonIgnore
+    private String loginVerificationCodeHash;
+
+    @JsonIgnore
+    private LocalDateTime loginVerificationCodeExpiresAt;
+
+    @JsonIgnore
+    private Integer loginVerificationAttempts;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(role.name()));

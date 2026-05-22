@@ -57,6 +57,21 @@ public class AccountEmailService {
         sendEmail(user.getEmail(), subject, body, "password changed");
     }
 
+    public void sendLoginVerificationCodeEmail(User user, String code, long expiryMinutes) {
+        String subject = "Your Knappi login code";
+        String body = """
+                Hi %s,
+
+                Use this code to finish signing in to Knappi:
+
+                %s
+
+                This code expires in %d minutes. If you did not try to sign in, you can ignore this email.
+                """.formatted(displayName(user), code, expiryMinutes);
+
+        sendEmail(user.getEmail(), subject, body, "login verification");
+    }
+
     private void sendEmail(String to, String subject, String body, String emailType) {
         if (!"smtp".equalsIgnoreCase(mailMode)) {
             logEmail(to, subject, body, emailType);

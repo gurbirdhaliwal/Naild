@@ -48,13 +48,26 @@ public class AuthenticationController {
 
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest request, HttpServletResponse response) {
-        var authResponse = service.authenticate(request);
-        addAuthCookie(response, authResponse.getToken());
-        return ResponseEntity.ok(Map.of(
-                "message", "Authenticated Successfully",
-                "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
-                "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
+        service.authenticate(request);
+        return ResponseEntity.accepted().body(Map.of(
+                "message", "Verification code sent.",
+                "requiresEmailVerification", true
         ));
+    }
+
+    @PostMapping("/authenticate/verify")
+    public ResponseEntity<?> verifyAuthenticationCode(@RequestBody LoginVerificationRequest request, HttpServletResponse response) {
+        try {
+            var authResponse = service.verifyLoginCode(request);
+            addAuthCookie(response, authResponse.getToken());
+            return ResponseEntity.ok(Map.of(
+                    "message", "Authenticated Successfully",
+                    "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
+                    "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
+            ));
+        } catch (LoginVerificationException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/logout")
