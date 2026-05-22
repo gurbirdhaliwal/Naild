@@ -25,7 +25,7 @@ public class AccountEmailService {
     @Value("${app.mail.mode:log}")
     private String mailMode;
 
-    @Value("${app.mail.from:no-reply@knappi.local}")
+    @Value("${app.mail.from:noreply@knappi.local}")
     private String fromAddress;
 
     public void sendPasswordResetEmail(User user, String resetLink, long expiryMinutes) {
