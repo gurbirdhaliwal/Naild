@@ -126,7 +126,7 @@ public class AuthenticationService {
                 .build();
     }
 
-    public void authenticate(AuthenticationRequest request) {
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.getEmail(),
@@ -135,12 +135,12 @@ public class AuthenticationService {
         );
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow();
-        var code = generateLoginVerificationCode();
-        user.setLoginVerificationCodeHash(passwordEncoder.encode(code));
-        user.setLoginVerificationCodeExpiresAt(LocalDateTime.now().plusMinutes(loginVerificationExpiryMinutes));
-        user.setLoginVerificationAttempts(0);
+        clearLoginVerificationCode(user);
         userRepository.save(user);
-        accountEmailService.sendLoginVerificationCodeEmail(user, code, loginVerificationExpiryMinutes);
+        var jwtToken = jwtService.generateToken(user);
+        return AuthenticationResponse.builder()
+                .token(jwtToken)
+                .build();
     }
 
     public AuthenticationResponse verifyLoginCode(LoginVerificationRequest request) {

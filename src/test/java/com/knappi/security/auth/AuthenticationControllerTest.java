@@ -15,7 +15,6 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -54,8 +53,6 @@ class AuthenticationControllerTest {
 
     @Test
     void registerSendsVerificationCodeWithoutSettingCookie() throws Exception {
-        doNothing().when(authenticationService).register(any(RegisterRequest.class));
-
         String body = """
                 {"firstname":"Test","lastname":"User","email":"user@example.com","password":"password"}
                 """;
@@ -100,8 +97,9 @@ class AuthenticationControllerTest {
     }
 
     @Test
-    void authenticateSendsVerificationCodeWithoutSettingCookie() throws Exception {
-        doNothing().when(authenticationService).authenticate(any(AuthenticationRequest.class));
+    void authenticateSetsHttpOnlyCookieWithoutReturningJwtInJson() throws Exception {
+        when(authenticationService.authenticate(any(AuthenticationRequest.class)))
+                .thenReturn(AuthenticationResponse.builder().token(JWT).build());
 
         String body = """
                 {"email":"user@example.com","password":"password"}
@@ -110,14 +108,18 @@ class AuthenticationControllerTest {
         List<String> setCookies = mockMvc.perform(post("/api/v1/auth/authenticate")
                         .contentType("application/json")
                         .content(body))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.requiresEmailVerification").value(true))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(cookie().httpOnly("token", true))
+                .andExpect(cookie().secure("token", true))
                 .andReturn()
                 .getResponse()
                 .getHeaders(HttpHeaders.SET_COOKIE);
 
-        assertThat(setCookies).isEmpty();
+        assertThat(setCookies).anySatisfy((setCookie) -> {
+            assertThat(setCookie).contains("Domain=.knappi.ca");
+            assertThat(setCookie).contains("SameSite=Lax");
+        });
     }
 
     @Test

@@ -65,10 +65,12 @@ public class AuthenticationController {
 
     @PostMapping("/authenticate")
     public ResponseEntity<?> authenticate(@RequestBody AuthenticationRequest request, HttpServletResponse response) {
-        service.authenticate(request);
-        return ResponseEntity.accepted().body(Map.of(
-                "message", "Verification code sent.",
-                "requiresEmailVerification", true
+        var authResponse = service.authenticate(request);
+        addAuthCookie(response, authResponse.getToken());
+        return ResponseEntity.ok(Map.of(
+                "message", "Authenticated Successfully",
+                "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
+                "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
         ));
     }
 
