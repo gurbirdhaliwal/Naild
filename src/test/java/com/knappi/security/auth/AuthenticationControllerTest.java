@@ -53,6 +53,53 @@ class AuthenticationControllerTest {
     }
 
     @Test
+    void registerSendsVerificationCodeWithoutSettingCookie() throws Exception {
+        doNothing().when(authenticationService).register(any(RegisterRequest.class));
+
+        String body = """
+                {"firstname":"Test","lastname":"User","email":"user@example.com","password":"password"}
+                """;
+
+        List<String> setCookies = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.requiresEmailVerification").value(true))
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andReturn()
+                .getResponse()
+                .getHeaders(HttpHeaders.SET_COOKIE);
+
+        assertThat(setCookies).isEmpty();
+    }
+
+    @Test
+    void verifyRegistrationCodeSetsHttpOnlyCookieWithoutReturningJwtInJson() throws Exception {
+        when(authenticationService.verifyRegistrationCode(any(LoginVerificationRequest.class)))
+                .thenReturn(AuthenticationResponse.builder().token(JWT).build());
+
+        String body = """
+                {"email":"user@example.com","code":"123456"}
+                """;
+
+        List<String> setCookies = mockMvc.perform(post("/api/v1/auth/register/verify")
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").doesNotExist())
+                .andExpect(cookie().httpOnly("token", true))
+                .andExpect(cookie().secure("token", true))
+                .andReturn()
+                .getResponse()
+                .getHeaders(HttpHeaders.SET_COOKIE);
+
+        assertThat(setCookies).anySatisfy((setCookie) -> {
+            assertThat(setCookie).contains("Domain=.knappi.ca");
+            assertThat(setCookie).contains("SameSite=Lax");
+        });
+    }
+
+    @Test
     void authenticateSendsVerificationCodeWithoutSettingCookie() throws Exception {
         doNothing().when(authenticationService).authenticate(any(AuthenticationRequest.class));
 

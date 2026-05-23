@@ -72,6 +72,21 @@ public class AccountEmailService {
         sendEmail(user.getEmail(), subject, body, "login verification");
     }
 
+    public void sendRegistrationVerificationCodeEmail(String email, String firstName, String code, long expiryMinutes) {
+        String subject = "Confirm your Knappi account";
+        String body = """
+                Hi %s,
+
+                Use this code to finish creating your Knappi account:
+
+                %s
+
+                This code expires in %d minutes. If you did not try to create an account, you can ignore this email.
+                """.formatted(displayName(firstName), code, expiryMinutes);
+
+        sendEmail(email, subject, body, "registration verification");
+    }
+
     private void sendEmail(String to, String subject, String body, String emailType) {
         if (!"smtp".equalsIgnoreCase(mailMode)) {
             logEmail(to, subject, body, emailType);
@@ -104,6 +119,13 @@ public class AccountEmailService {
     private String displayName(User user) {
         if (user.getFirstname() != null && !user.getFirstname().isBlank()) {
             return user.getFirstname();
+        }
+        return "there";
+    }
+
+    private String displayName(String firstName) {
+        if (firstName != null && !firstName.isBlank()) {
+            return firstName;
         }
         return "there";
     }

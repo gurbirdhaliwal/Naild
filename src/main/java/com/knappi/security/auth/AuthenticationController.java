@@ -37,13 +37,30 @@ public class AuthenticationController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletResponse response) {
-        var authResponse = service.register(request);
-        addAuthCookie(response, authResponse.getToken());
-        return ResponseEntity.ok(Map.of(
-                "message", "Registered Successfully",
-                "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
-                "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
-        ));
+        try {
+            service.register(request);
+            return ResponseEntity.accepted().body(Map.of(
+                    "message", "Verification code sent.",
+                    "requiresEmailVerification", true
+            ));
+        } catch (LoginVerificationException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
+    }
+
+    @PostMapping("/register/verify")
+    public ResponseEntity<?> verifyRegistrationCode(@RequestBody LoginVerificationRequest request, HttpServletResponse response) {
+        try {
+            var authResponse = service.verifyRegistrationCode(request);
+            addAuthCookie(response, authResponse.getToken());
+            return ResponseEntity.ok(Map.of(
+                    "message", "Registered Successfully",
+                    "sessionExpiresAt", jwtService.extractExpirationInstant(authResponse.getToken()),
+                    "sessionDurationSeconds", jwtService.getSessionDuration().toSeconds()
+            ));
+        } catch (LoginVerificationException ex) {
+            return ResponseEntity.badRequest().body(Map.of("message", ex.getMessage()));
+        }
     }
 
     @PostMapping("/authenticate")
