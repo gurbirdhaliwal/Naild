@@ -14,6 +14,7 @@ import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -96,7 +97,10 @@ public class JwtService {
         }
 
         Date passwordChangedAt = Date.from(
-                user.getPasswordChangedAt().atZone(ZoneId.systemDefault()).toInstant()
+                user.getPasswordChangedAt()
+                        .atZone(ZoneId.systemDefault())
+                        .toInstant()
+                        .truncatedTo(ChronoUnit.SECONDS)
         );
 
         return !issuedAt.before(passwordChangedAt);

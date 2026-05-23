@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,6 +36,20 @@ class JwtServiceTest {
         user.setPasswordChangedAt(LocalDateTime.ofInstant(issuedAt.toInstant(), ZoneId.systemDefault()).plusSeconds(1));
 
         assertThat(jwtService.isTokenValid(token, user)).isFalse();
+    }
+
+    @Test
+    void tokenIsValidWhenPasswordTimestampIsInSameSecondAsIssueTime() {
+        User user = localUser();
+        String token = jwtService.generateToken(user);
+
+        Date issuedAt = jwtService.extractClaims(token, claims -> claims.getIssuedAt());
+        user.setPasswordChangedAt(
+                LocalDateTime.ofInstant(issuedAt.toInstant(), ZoneId.systemDefault())
+                        .plus(500, ChronoUnit.MILLIS)
+        );
+
+        assertThat(jwtService.isTokenValid(token, user)).isTrue();
     }
 
     private User localUser() {
