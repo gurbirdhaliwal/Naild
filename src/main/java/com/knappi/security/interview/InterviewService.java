@@ -227,6 +227,10 @@ public class InterviewService {
         }
 
         String normalizedTopic = normalizeOptionalText(topic);
+        if ("tech-chat".equals(normalizeRequiredText(sessionType, "behavioral-interview"))) {
+            return normalizedTopic != null ? "Tech Chat • " + normalizedTopic : role + " • Tech Chat";
+        }
+
         if ("technical-communication".equals(normalizeRequiredText(sessionType, "behavioral-interview"))) {
             if (normalizedTopic != null) {
                 return role + " • " + normalizedTopic;
