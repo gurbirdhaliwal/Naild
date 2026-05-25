@@ -9,4 +9,5 @@ public class UpdateUserRequest {
     private String email;
     private String currentpassword;
     private String password;
+    private String aureonVoiceId;
 }

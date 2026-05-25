@@ -59,6 +59,13 @@ public class UserController {
 
         if (request.getFirstname() != null) user.setFirstname(request.getFirstname());
         if (request.getLastname() != null) user.setLastname(request.getLastname());
+        if (request.getAureonVoiceId() != null) {
+            try {
+                user.setAureonVoiceId(normalizeAureonVoiceId(request.getAureonVoiceId()));
+            } catch (IllegalArgumentException ex) {
+                return ResponseEntity.badRequest().body("Invalid Aureon voice id");
+            }
+        }
 
         if (passwordProvided) {
             if (isOauthAccount) {
@@ -93,5 +100,16 @@ public class UserController {
 
         String password = user.getPassword();
         return password != null && password.startsWith("oauth-user");
+    }
+
+    private String normalizeAureonVoiceId(String aureonVoiceId) {
+        String normalized = aureonVoiceId.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        if (!normalized.matches("[a-z0-9-]{1,64}")) {
+            throw new IllegalArgumentException("Invalid Aureon voice id");
+        }
+        return normalized;
     }
 }

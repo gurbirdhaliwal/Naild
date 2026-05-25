@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
 
 @Repository
 public interface InterviewRepository extends JpaRepository<Interview, Long> {
@@ -23,4 +24,11 @@ public interface InterviewRepository extends JpaRepository<Interview, Long> {
     
     @Query("SELECT COUNT(i) FROM Interview i WHERE i.user = :user AND i.status = 'active'")
     long countActiveInterviewsByUser(@Param("user") User user);
+
+    @Query("SELECT COUNT(i) FROM Interview i WHERE i.user = :user AND i.sessionType = :sessionType AND i.status = 'active' AND i.createdAt >= :createdAfter")
+    long countActiveSessionsByUserAndTypeSince(
+            @Param("user") User user,
+            @Param("sessionType") String sessionType,
+            @Param("createdAfter") LocalDateTime createdAfter
+    );
 } 

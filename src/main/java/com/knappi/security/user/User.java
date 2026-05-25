@@ -44,6 +44,9 @@ public class User implements UserDetails {
     @Builder.Default
     private String authProvider = "LOCAL";
 
+    @Column(length = 64)
+    private String aureonVoiceId;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

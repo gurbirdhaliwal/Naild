@@ -5,8 +5,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.knappi.security.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -15,6 +18,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class InterviewService {
     
+    private static final int MAX_ACTIVE_TECH_CHAT_SESSIONS_PER_DAY = 5;
+
     private final InterviewRepository interviewRepository;
     private final ObjectMapper objectMapper;
     
@@ -61,6 +66,7 @@ public class InterviewService {
             String resolvedDifficulty = normalizeRequiredText(difficulty, "mid");
             String resolvedSessionType = normalizeRequiredText(sessionType, "behavioral-interview");
             String resolvedTitle = buildTitle(title, generatedPrompt, resolvedRole, practiceMode, topic, resolvedSessionType);
+            enforceTechChatCreationLimit(user, resolvedSessionType);
 
             Interview interview = Interview.builder()
                     .user(user)
@@ -133,6 +139,17 @@ public class InterviewService {
         interview.setTitle(title);
         return interviewRepository.save(interview);
     }
+
+    public Interview updateInterviewPromptContext(Long interviewId, User user, String promptContext) {
+        Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
+        if (interviewOpt.isEmpty()) {
+            throw new RuntimeException("Interview not found");
+        }
+
+        Interview interview = interviewOpt.get();
+        interview.setPromptContext(normalizeOptionalText(promptContext));
+        return interviewRepository.save(interview);
+    }
     
     public Interview updateGradingResult(Long interviewId, User user, Map<String, Object> gradingResult) {
         Optional<Interview> interviewOpt = interviewRepository.findByIdAndUser(interviewId, user);
@@ -201,6 +218,26 @@ public class InterviewService {
 
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private void enforceTechChatCreationLimit(User user, String sessionType) {
+        if (!"tech-chat".equals(sessionType)) {
+            return;
+        }
+
+        LocalDateTime todayStart = LocalDateTime.now().toLocalDate().atStartOfDay();
+        long activeSessionsToday = interviewRepository.countActiveSessionsByUserAndTypeSince(
+                user,
+                "tech-chat",
+                todayStart
+        );
+
+        if (activeSessionsToday >= MAX_ACTIVE_TECH_CHAT_SESSIONS_PER_DAY) {
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many active Tech Chat sessions today"
+            );
+        }
     }
 
     private String buildTitle(

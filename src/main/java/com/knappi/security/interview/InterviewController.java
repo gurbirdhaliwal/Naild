@@ -169,6 +169,23 @@ public class InterviewController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PutMapping("/{id}/prompt_context")
+    public ResponseEntity<?> updateInterviewPromptContext(@PathVariable Long id,
+                                                          @RequestBody Map<String, String> requestBody,
+                                                          Authentication authentication,
+                                                          HttpServletRequest request) {
+        try {
+            User user = getCurrentUser(authentication, request);
+            String promptContext = requestBody.get("promptContext");
+            Interview interview = interviewService.updateInterviewPromptContext(id, user, promptContext);
+            return ResponseEntity.ok(interview);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(Map.of("error", e.getReason()));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
     
     @PutMapping("/{id}/grading")
     public ResponseEntity<?> updateGradingResult(@PathVariable Long id, 
