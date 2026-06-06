@@ -227,7 +227,7 @@ public class InterviewController {
     private User getCurrentUser(Authentication authentication, HttpServletRequest request) {
         if (authentication != null && authentication.isAuthenticated()) {
             Object principal = authentication.getPrincipal();
-            if (principal instanceof User user) {
+            if (principal instanceof User user && user.getId() != null) {
                 return user;
             }
         }

@@ -35,6 +35,9 @@ public class AuthenticationController {
     @Value("${app.auth.cookie-domain:}")
     private String cookieDomain;
 
+    @Value("${app.auth.me.require-db-validation:false}")
+    private boolean requireDbValidationForMe;
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request, HttpServletResponse response) {
         try {
@@ -145,6 +148,10 @@ public class AuthenticationController {
         }
 
         try {
+            if (!requireDbValidationForMe) {
+                return ResponseEntity.ok(jwtService.extractSession(token));
+            }
+
             String email = jwtService.extractUsername(token);
             User user = userRepository.findByEmail(email).orElseThrow();
 

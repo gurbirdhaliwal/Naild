@@ -1,6 +1,8 @@
 package com.knappi.security.auth;
 
 import com.knappi.security.config.JwtService;
+import com.knappi.security.user.Role;
+import com.knappi.security.user.User;
 import com.knappi.security.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,11 +14,15 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,18 +34,20 @@ class AuthenticationControllerTest {
 
     private AuthenticationService authenticationService;
     private JwtService jwtService;
+    private UserRepository userRepository;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         authenticationService = mock(AuthenticationService.class);
         jwtService = mock(JwtService.class);
+        userRepository = mock(UserRepository.class);
 
         AuthenticationController controller = new AuthenticationController(
                 authenticationService,
                 mock(PasswordResetService.class),
                 jwtService,
-                mock(UserRepository.class)
+                userRepository
         );
         ReflectionTestUtils.setField(controller, "cookieSecure", true);
         ReflectionTestUtils.setField(controller, "cookieSameSite", "Lax");
@@ -49,6 +57,48 @@ class AuthenticationControllerTest {
 
         when(jwtService.extractExpirationInstant(JWT)).thenReturn(Instant.parse("2026-05-19T12:00:00Z"));
         when(jwtService.getSessionDuration()).thenReturn(Duration.ofHours(8));
+    }
+
+    @Test
+    void meUsesStatelessJwtSessionByDefault() throws Exception {
+        User user = localUser();
+        when(jwtService.extractSession(JWT)).thenReturn(AuthenticatedUserResponse.builder()
+                .user(user)
+                .sessionExpiresAt(Instant.parse("2026-05-19T12:00:00Z"))
+                .sessionDurationSeconds(Duration.ofHours(8).toSeconds())
+                .build());
+
+        mockMvc.perform(get("/api/v1/auth/me")
+                        .cookie(new jakarta.servlet.http.Cookie("token", JWT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value(user.getEmail()))
+                .andExpect(jsonPath("$.sessionDurationSeconds").value(Duration.ofHours(8).toSeconds()));
+
+        verify(userRepository, never()).findByEmail(any());
+    }
+
+    @Test
+    void meCanRequireDbValidationWhenConfigured() throws Exception {
+        User user = localUser();
+        when(jwtService.extractUsername(JWT)).thenReturn(user.getEmail());
+        when(jwtService.isTokenValid(JWT, user)).thenReturn(true);
+        when(userRepository.findByEmail(user.getEmail())).thenReturn(Optional.of(user));
+
+        AuthenticationController controller = new AuthenticationController(
+                authenticationService,
+                mock(PasswordResetService.class),
+                jwtService,
+                userRepository
+        );
+        ReflectionTestUtils.setField(controller, "requireDbValidationForMe", true);
+        MockMvc strictMockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+
+        strictMockMvc.perform(get("/api/v1/auth/me")
+                        .cookie(new jakarta.servlet.http.Cookie("token", JWT)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.email").value(user.getEmail()));
+
+        verify(userRepository).findByEmail(user.getEmail());
     }
 
     @Test
@@ -146,5 +196,18 @@ class AuthenticationControllerTest {
             assertThat(setCookie).contains("Domain=.knappi.ca");
             assertThat(setCookie).contains("SameSite=Lax");
         });
+    }
+
+    private User localUser() {
+        return User.builder()
+                .id(1L)
+                .username("user@example.com")
+                .firstname("Test")
+                .lastname("User")
+                .email("user@example.com")
+                .password("encoded-password")
+                .role(Role.USER)
+                .authProvider("LOCAL")
+                .build();
     }
 }

@@ -52,6 +52,25 @@ class JwtServiceTest {
         assertThat(jwtService.isTokenValid(token, user)).isTrue();
     }
 
+    @Test
+    void tokenContainsSessionClaimsForStatelessSessionReads() {
+        User user = localUser();
+        user.setAureonVoiceId("alloy");
+        user.setPasswordChangedAt(LocalDateTime.now().minusMinutes(1));
+
+        String token = jwtService.generateToken(user);
+        User sessionUser = jwtService.extractSession(token).getUser();
+
+        assertThat(sessionUser.getId()).isEqualTo(user.getId());
+        assertThat(sessionUser.getEmail()).isEqualTo(user.getEmail());
+        assertThat(sessionUser.getFirstname()).isEqualTo(user.getFirstname());
+        assertThat(sessionUser.getLastname()).isEqualTo(user.getLastname());
+        assertThat(sessionUser.getRole()).isEqualTo(user.getRole());
+        assertThat(sessionUser.getAuthProvider()).isEqualTo(user.getAuthProvider());
+        assertThat(sessionUser.getAureonVoiceId()).isEqualTo(user.getAureonVoiceId());
+        assertThat(sessionUser.getPassword()).isNull();
+    }
+
     private User localUser() {
         return User.builder()
                 .id(1L)

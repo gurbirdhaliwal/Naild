@@ -1,5 +1,7 @@
 package com.knappi.security.config;
 
+import com.knappi.security.auth.AuthenticatedUserResponse;
+import com.knappi.security.user.Role;
 import com.knappi.security.user.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.security.Key;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
@@ -41,7 +44,7 @@ public class JwtService {
     }
 
     public String generateToken(UserDetails userDetails) {
-        return generateToken(new HashMap<>(), userDetails);
+        return generateToken(buildSessionClaims(userDetails), userDetails);
     }
 
     public String generateToken(
@@ -57,6 +60,24 @@ public class JwtService {
                 .setExpiration(Date.from(issuedAt.plus(SESSION_DURATION)))
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public AuthenticatedUserResponse extractSession(String token) {
+        Claims claims = extractAllClaims(token);
+        User user = buildUserFromClaims(claims);
+        user.setPassword(null);
+
+        return AuthenticatedUserResponse.builder()
+                .user(user)
+                .sessionExpiresAt(claims.getExpiration().toInstant())
+                .sessionDurationSeconds(getSessionDuration().toSeconds())
+                .build();
+    }
+
+    public User extractUser(String token) {
+        User user = buildUserFromClaims(extractAllClaims(token));
+        user.setPassword(null);
+        return user;
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
@@ -112,6 +133,85 @@ public class JwtService {
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
+
+    private Map<String, Object> buildSessionClaims(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+
+        if (!(userDetails instanceof User user)) {
+            return claims;
+        }
+
+        claims.put("userId", user.getId());
+        claims.put("email", user.getEmail());
+        claims.put("firstname", user.getFirstname());
+        claims.put("lastname", user.getLastname());
+        claims.put("role", user.getRole() == null ? null : user.getRole().name());
+        claims.put("authProvider", user.getAuthProvider());
+        claims.put("aureonVoiceId", user.getAureonVoiceId());
+        claims.put(
+                "passwordChangedAt",
+                user.getPasswordChangedAt() == null ? null : user.getPasswordChangedAt().toString()
+        );
+        claims.values().removeIf(value -> value == null);
+        return claims;
+    }
+
+    private User buildUserFromClaims(Claims claims) {
+        String email = getStringClaim(claims, "email", claims.getSubject());
+        String role = getStringClaim(claims, "role", Role.USER.name());
+
+        return User.builder()
+                .id(getLongClaim(claims, "userId"))
+                .username(email)
+                .firstname(getStringClaim(claims, "firstname", null))
+                .lastname(getStringClaim(claims, "lastname", null))
+                .email(email)
+                .password(null)
+                .role(parseRole(role))
+                .authProvider(getStringClaim(claims, "authProvider", "LOCAL"))
+                .aureonVoiceId(getStringClaim(claims, "aureonVoiceId", null))
+                .passwordChangedAt(parseLocalDateTime(getStringClaim(claims, "passwordChangedAt", null)))
+                .build();
+    }
+
+    private String getStringClaim(Claims claims, String name, String fallback) {
+        Object value = claims.get(name);
+        return value == null ? fallback : value.toString();
+    }
+
+    private Long getLongClaim(Claims claims, String name) {
+        Object value = claims.get(name);
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String text && !text.isBlank()) {
+            try {
+                return Long.parseLong(text);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Role parseRole(String role) {
+        try {
+            return Role.valueOf(role);
+        } catch (RuntimeException ignored) {
+            return Role.USER;
+        }
+    }
+
+    private LocalDateTime parseLocalDateTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(value);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     private Key getSignInKey() {
