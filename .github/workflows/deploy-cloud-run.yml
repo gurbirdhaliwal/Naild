@@ -21,8 +21,8 @@ env:
   CLOUD_SQL_INSTANCE_CONNECTION_NAME: ${{ vars.CLOUD_SQL_INSTANCE_CONNECTION_NAME || 'naild-491922:us-central1:knappi-user' }}
   CLOUD_SQL_DATABASE_NAME: ${{ vars.CLOUD_SQL_DATABASE_NAME || 'knappi_db' }}
   WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
-  SPRING_DATASOURCE_URL: ${{ vars.SPRING_DATASOURCE_URL }}
-  SPRING_DATASOURCE_USERNAME: ${{ vars.SPRING_DATASOURCE_USERNAME }}
+  SPRING_DATASOURCE_URL: ${{ vars.SPRING_DATASOURCE_URL || 'jdbc:mysql:///knappi_db?cloudSqlInstance=naild-491922:us-central1:knappi-user&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false' }}
+  SPRING_DATASOURCE_USERNAME: ${{ vars.SPRING_DATASOURCE_USERNAME || 'knappi_user' }}
   GOOGLE_OAUTH_CLIENT_ID: ${{ vars.GOOGLE_OAUTH_CLIENT_ID }}
   CORS_ALLOW_ORIGINS: ${{ vars.CORS_ALLOW_ORIGINS || vars.WEB_ORIGIN }}
   APP_PASSWORD_RESET_BASE_URL: ${{ vars.APP_PASSWORD_RESET_BASE_URL }}
