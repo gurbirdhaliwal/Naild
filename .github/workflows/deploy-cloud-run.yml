@@ -18,8 +18,8 @@ env:
   ARTIFACT_REGISTRY_REPO: ${{ vars.ARTIFACT_REGISTRY_REPO || 'knappi-repo' }}
   SPRING_SERVICE: ${{ vars.CLOUD_RUN_SPRING_SERVICE || 'knappi-spring' }}
   CLOUD_RUN_SERVICE_ACCOUNT: ${{ vars.CLOUD_RUN_SERVICE_ACCOUNT }}
-  CLOUD_SQL_INSTANCE_CONNECTION_NAME: ${{ vars.CLOUD_SQL_INSTANCE_CONNECTION_NAME || 'naild-491922:us-central1:naild-mysql' }}
-  CLOUD_SQL_DATABASE_NAME: ${{ vars.CLOUD_SQL_DATABASE_NAME || 'naild_db' }}
+  CLOUD_SQL_INSTANCE_CONNECTION_NAME: ${{ vars.CLOUD_SQL_INSTANCE_CONNECTION_NAME || 'naild-491922:us-central1:knappi-user' }}
+  CLOUD_SQL_DATABASE_NAME: ${{ vars.CLOUD_SQL_DATABASE_NAME || 'knappi_db' }}
   WEB_ORIGIN: ${{ vars.WEB_ORIGIN }}
   SPRING_DATASOURCE_URL: ${{ vars.SPRING_DATASOURCE_URL }}
   SPRING_DATASOURCE_USERNAME: ${{ vars.SPRING_DATASOURCE_USERNAME }}
@@ -84,7 +84,7 @@ jobs:
           done
 
           if [[ "${SPRING_DATASOURCE_URL}" == *"127.0.0.1"* || "${SPRING_DATASOURCE_URL}" == *"localhost"* ]]; then
-            echo "::error::SPRING_DATASOURCE_URL points to localhost. Cloud Run needs the production Cloud SQL URL, for example jdbc:mysql:///naild_db?cloudSqlInstance=${CLOUD_SQL_INSTANCE_CONNECTION_NAME}&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false"
+            echo "::error::SPRING_DATASOURCE_URL points to localhost. Cloud Run needs the production Cloud SQL URL, for example jdbc:mysql:///knappi_db?cloudSqlInstance=${CLOUD_SQL_INSTANCE_CONNECTION_NAME}&socketFactory=com.google.cloud.sql.mysql.SocketFactory&useSSL=false"
             exit 1
           fi
 
